@@ -34,8 +34,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
               var data = jsonDecode(snapshot.data);
 
-              var bids = data['b'] as List<dynamic>;
-              var asks = data['a'] as List<dynamic>;
+              var bids = normalizeOrderBook(data['b'] as List<dynamic>);
+              var asks = normalizeOrderBook(data['a'] as List<dynamic>);
 
               return OrderBookWidget(
                 asks: asks,
