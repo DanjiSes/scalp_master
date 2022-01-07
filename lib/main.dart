@@ -48,19 +48,25 @@ class _MyHomePageState extends State<MyHomePage> {
                 var orderBook =
                     OrderBook.fromJson(jsonDecode("${snapshot.data}"));
                 return ListView(
+                  // shrinkWrap: true,
+                  // physics: const NeverScrollableScrollPhysics(),
                   children: [
                     ...orderBook.bids.map((e) {
                       return PriceItemWidget(
-                        price: double.parse(e[0]),
+                        price: double.parse(e[0])
+                            .toStringAsFixed(2)
+                            .replaceFirst('.', ','),
                         color: Colors.green,
-                        volume: e[1].toString(),
+                        volume: e[1].toString().replaceFirst('.', ','),
                       );
                     }),
                     ...orderBook.asks.map((e) {
                       return PriceItemWidget(
-                        price: double.parse(e[0]),
+                        price: double.parse(e[0])
+                            .toStringAsFixed(2)
+                            .replaceFirst('.', ','),
                         color: Colors.red,
-                        volume: e[1].toString(),
+                        volume: e[1].toString().replaceFirst('.', ','),
                       );
                     }),
                   ],
@@ -89,7 +95,7 @@ class PriceItemWidget extends StatefulWidget {
       : super(key: key);
 
   final String volume;
-  final double price;
+  final String price;
   final Color color;
 
   @override
