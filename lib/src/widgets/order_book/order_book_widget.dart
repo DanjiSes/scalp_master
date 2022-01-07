@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:scalp_master/src/entities/order_book.dart';
-import 'package:scalp_master/src/widgets/order_book/price_row_widget.dart';
+import 'package:scalp_master/src/widgets/order_book/price_level_widget.dart';
 
 class OrderBookWidget extends StatefulWidget {
   const OrderBookWidget({
@@ -20,14 +20,14 @@ class _OrderBookWidgetState extends State<OrderBookWidget> {
     return ListView(
       children: [
         ...widget.orderBookData.asks.reversed.map((e) {
-          return PriceRowWidget(
+          return PriceLevelWidget(
             price: double.parse(e[0]).toString(),
             color: Colors.red,
             volume: e[1].toString(),
           );
         }),
         ...widget.orderBookData.bids.map((e) {
-          return PriceRowWidget(
+          return PriceLevelWidget(
             price: double.parse(e[0]).toString(),
             color: Colors.green,
             volume: e[1].toString(),

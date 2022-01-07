@@ -32,7 +32,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               }
 
-              // _channel.sink.close();
+              _channel.sink.close();
+
+              return Container(
+                padding: const EdgeInsets.all(30),
+                child: Text("${snapshot.data}"),
+              );
 
               return OrderBookWidget(
                   orderBookData: normalizeOrderBook(OrderBookEntity.fromJson(

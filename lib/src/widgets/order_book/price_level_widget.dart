@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class PriceRowWidget extends StatefulWidget {
-  const PriceRowWidget(
+class PriceLevelWidget extends StatefulWidget {
+  const PriceLevelWidget(
       {Key? key,
       required this.volume,
       required this.price,
@@ -13,10 +13,10 @@ class PriceRowWidget extends StatefulWidget {
   final Color color;
 
   @override
-  _PriceRowWidgetState createState() => _PriceRowWidgetState();
+  _PriceLevelWidgetState createState() => _PriceLevelWidgetState();
 }
 
-class _PriceRowWidgetState extends State<PriceRowWidget> {
+class _PriceLevelWidgetState extends State<PriceLevelWidget> {
   bool _highlighted = false;
 
   void _highlightOn(PointerEvent details) {
