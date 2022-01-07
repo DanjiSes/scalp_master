@@ -36,9 +36,9 @@ class _PriceLevelWidgetState extends State<PriceLevelWidget> {
     const textStyle = TextStyle(fontSize: 12);
     var bgColor = widget.color.withOpacity(_highlighted ? 0.4 : 0.3);
 
-    if (double.parse(widget.volume) == 0) {
-      bgColor = widget.color.withOpacity(0);
-    }
+    // if (double.parse(widget.volume) == 0) {
+    //   bgColor = widget.color.withOpacity(0);
+    // }
 
     return MouseRegion(
       onEnter: _highlightOn,

@@ -25,23 +25,22 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
         body: StreamBuilder(
             stream: _channel.stream,
-            builder: (context, snapshot) {
+            builder: (context, AsyncSnapshot<dynamic> snapshot) {
               if (!snapshot.hasData) {
                 return const Center(
                   child: Text('Loading...'),
                 );
               }
 
-              _channel.sink.close();
+              var data = jsonDecode(snapshot.data);
 
-              return Container(
-                padding: const EdgeInsets.all(30),
-                child: Text("${snapshot.data}"),
-              );
+              var bids = data['b'] as List<dynamic>;
+              var asks = data['a'] as List<dynamic>;
 
               return OrderBookWidget(
-                  orderBookData: normalizeOrderBook(OrderBookEntity.fromJson(
-                      json.decode("${snapshot.data}"))));
+                asks: asks,
+                bids: bids,
+              );
             }));
   }
 

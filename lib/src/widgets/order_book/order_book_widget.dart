@@ -5,10 +5,12 @@ import 'package:scalp_master/src/widgets/order_book/price_level_widget.dart';
 class OrderBookWidget extends StatefulWidget {
   const OrderBookWidget({
     Key? key,
-    required this.orderBookData,
+    required this.bids,
+    required this.asks,
   }) : super(key: key);
 
-  final OrderBookEntity orderBookData;
+  final List<dynamic> bids;
+  final List<dynamic> asks;
 
   @override
   _OrderBookWidgetState createState() => _OrderBookWidgetState();
@@ -19,14 +21,14 @@ class _OrderBookWidgetState extends State<OrderBookWidget> {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        ...widget.orderBookData.asks.reversed.map((e) {
+        ...widget.asks.reversed.map((e) {
           return PriceLevelWidget(
             price: double.parse(e[0]).toString(),
             color: Colors.red,
             volume: e[1].toString(),
           );
         }),
-        ...widget.orderBookData.bids.map((e) {
+        ...widget.bids.map((e) {
           return PriceLevelWidget(
             price: double.parse(e[0]).toString(),
             color: Colors.green,
