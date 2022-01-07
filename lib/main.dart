@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,27 +15,68 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Scalping Helper by Savchenko.dev',
-      themeMode: ThemeMode.dark,
-      darkTheme: ThemeData.dark(),
-      home: Scaffold(
-          body: ListView(
-        children: const [
-          PriceItemWidget(
-            price: 45.432,
-            color: Colors.green,
-            volume: '4M',
-          ),
-          Divider(thickness: 1, height: 1),
-          PriceItemWidget(
-            price: 45.432,
-            color: Colors.red,
-            volume: '4M',
-          ),
-          Divider(thickness: 1, height: 1)
-        ],
-      )),
-    );
+        title: 'Scalping Helper by Savchenko.dev',
+        themeMode: ThemeMode.dark,
+        darkTheme: ThemeData.dark(),
+        home: const MyHomePage());
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  final _channel = WebSocketChannel.connect(
+    Uri.parse('wss://stream.binance.com:9443/ws/btcusdt@depth@1000ms'),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        body: StreamBuilder(
+            stream: _channel.stream,
+            builder: (context, snapshot) {
+              // return Text(snapshot.hasData ? "${snapshot.data}" : '');
+
+              if (snapshot.hasData) {
+                var orderBook =
+                    OrderBook.fromJson(jsonDecode("${snapshot.data}"));
+                return ListView(
+                  children: [
+                    ...orderBook.bids.map((e) {
+                      return PriceItemWidget(
+                        price: double.parse(e[0]),
+                        color: Colors.green,
+                        volume: e[1].toString(),
+                      );
+                    }),
+                    ...orderBook.asks.map((e) {
+                      return PriceItemWidget(
+                        price: double.parse(e[0]),
+                        color: Colors.red,
+                        volume: e[1].toString(),
+                      );
+                    }),
+                  ],
+                );
+              }
+
+              return ListView(
+                children: const [],
+              );
+            }));
+  }
+
+  @override
+  void dispose() {
+    _channel.sink.close();
+    super.dispose();
   }
 }
 
@@ -69,7 +114,7 @@ class _PriceItemWidgetState extends State<PriceItemWidget> {
   @override
   Widget build(BuildContext context) {
     const textStyle = TextStyle(fontSize: 12);
-    var bgColor = widget.color.withOpacity(_highlighted ? 0.6 : 0.5);
+    var bgColor = widget.color.withOpacity(_highlighted ? 0.4 : 0.3);
 
     return MouseRegion(
       onEnter: _highlightOn,
@@ -101,5 +146,35 @@ class _PriceItemWidgetState extends State<PriceItemWidget> {
         ),
       )),
     );
+  }
+}
+
+class OrderBook {
+  final String eventType;
+  final int eventTime;
+  final String symbol;
+  final int firstUpdateID;
+  final int finalUpdateID;
+  final List<dynamic> bids;
+  final List<dynamic> asks;
+
+  OrderBook(
+      {required this.eventType,
+      required this.eventTime,
+      required this.symbol,
+      required this.firstUpdateID,
+      required this.finalUpdateID,
+      required this.bids,
+      required this.asks});
+
+  factory OrderBook.fromJson(Map<String, dynamic> json) {
+    return OrderBook(
+        eventType: json['e'],
+        eventTime: json['E'],
+        symbol: json['s'],
+        firstUpdateID: json['U'],
+        finalUpdateID: json['u'],
+        bids: json['b'],
+        asks: json['a']);
   }
 }
