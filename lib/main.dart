@@ -15,24 +15,21 @@ class MyApp extends StatelessWidget {
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData.dark(),
       home: Scaffold(
-          body: Container(
-        width: 250,
-        child: ListView(
-          children: const [
-            PriceItemWidget(
-              price: 45.432,
-              color: Colors.green,
-              volume: '4M',
-            ),
-            Divider(thickness: 1, height: 1),
-            PriceItemWidget(
-              price: 45.432,
-              color: Colors.red,
-              volume: '4M',
-            ),
-            Divider(thickness: 1, height: 1)
-          ],
-        ),
+          body: ListView(
+        children: const [
+          PriceItemWidget(
+            price: 45.432,
+            color: Colors.green,
+            volume: '4M',
+          ),
+          Divider(thickness: 1, height: 1),
+          PriceItemWidget(
+            price: 45.432,
+            color: Colors.red,
+            volume: '4M',
+          ),
+          Divider(thickness: 1, height: 1)
+        ],
       )),
     );
   }
