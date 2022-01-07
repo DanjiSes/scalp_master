@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:scalp_master/src/entities/order_book.dart';
+import 'package:scalp_master/src/utils/notmalize_order_book.dart';
 import 'package:scalp_master/src/widgets/order_book/order_book_widget.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -16,7 +17,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final _channel = WebSocketChannel.connect(
-    Uri.parse('wss://stream.binance.com:9443/ws/shibusdt@depth@1000ms'),
+    Uri.parse('wss://stream.binance.com:9443/ws/btcusdt@depth@1000ms'),
   );
 
   @override
@@ -31,9 +32,11 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               }
 
+              // _channel.sink.close();
+
               return OrderBookWidget(
-                  orderBookData: OrderBookEntity.fromJson(
-                      json.decode("${snapshot.data}")));
+                  orderBookData: normalizeOrderBook(OrderBookEntity.fromJson(
+                      json.decode("${snapshot.data}"))));
             }));
   }
 

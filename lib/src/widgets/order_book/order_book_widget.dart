@@ -22,14 +22,14 @@ class _OrderBookWidgetState extends State<OrderBookWidget> {
         ...widget.orderBookData.asks.reversed.map((e) {
           return PriceRowWidget(
             price: double.parse(e[0]).toString(),
-            color: Colors.green,
+            color: Colors.red,
             volume: e[1].toString(),
           );
         }),
         ...widget.orderBookData.bids.map((e) {
           return PriceRowWidget(
             price: double.parse(e[0]).toString(),
-            color: Colors.red,
+            color: Colors.green,
             volume: e[1].toString(),
           );
         }),
