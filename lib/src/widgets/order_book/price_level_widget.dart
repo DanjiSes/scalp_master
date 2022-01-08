@@ -5,12 +5,14 @@ class PriceLevelWidget extends StatefulWidget {
       {Key? key,
       required this.volume,
       required this.price,
-      required this.color})
+      required this.color,
+      required this.indicator})
       : super(key: key);
 
   final String volume;
   final String price;
   final Color color;
+  final double indicator;
 
   @override
   _PriceLevelWidgetState createState() => _PriceLevelWidgetState();
@@ -49,7 +51,17 @@ class _PriceLevelWidgetState extends State<PriceLevelWidget> {
           children: <Widget>[
             Expanded(
                 child: Container(
-              color: bgColor,
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                stops: [widget.indicator, widget.indicator],
+                colors: [
+                  Colors.yellow.withOpacity(0.5),
+                  bgColor,
+                ],
+              )),
+              // color: bgColor,
               padding: const EdgeInsets.all(4),
               child: Text(
                 widget.volume,

@@ -17,7 +17,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final _channel = WebSocketChannel.connect(
-    Uri.parse('wss://stream.binance.com:9443/ws/btcusdt@depth@1000ms'),
+    Uri.parse('wss://stream.binance.com:9443/ws/btsusdt@depth@1000ms'),
   );
 
   @override
