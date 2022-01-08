@@ -3,6 +3,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+class PriceLevel {
+  final double price;
+  final double quantity;
+
+  PriceLevel(this.price, this.quantity);
+}
+
 class MyHomePage extends StatefulWidget {
   const MyHomePage({
     Key? key,
@@ -16,7 +23,9 @@ class _MyHomePageState extends State<MyHomePage> {
   final WebSocketChannel _channel = WebSocketChannel.connect(
     Uri.parse('wss://stream.binance.com:9443/ws/btsusdt@depth@1000ms'),
   );
-  Map<dynamic, dynamic> _book = {};
+
+  Map<double, PriceLevel> _bids = {};
+  Map<double, PriceLevel> _asks = {};
 
   @override
   void initState() {
@@ -30,7 +39,18 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
         body: Center(
-      child: Text(_book.toString()),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(_bids.toString()),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(_asks.toString()),
+          )
+        ],
+      ),
     ));
   }
 
@@ -42,7 +62,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void bufferBook(dynamic book) {
     setState(() {
-      _book = book;
+      var bidsList = book['b'] as List<dynamic>;
+      var asksList = book['a'] as List<dynamic>;
+
+      for (var b in bidsList) {
+        var price = double.parse(b[0]);
+        var quantity = double.parse(b[1]);
+        _bids[price] = PriceLevel(price, quantity);
+      }
+
+      for (var a in asksList) {
+        var price = double.parse(a[0]);
+        var quantity = double.parse(a[1]);
+        _asks[price] = PriceLevel(price, quantity);
+      }
     });
   }
 }
