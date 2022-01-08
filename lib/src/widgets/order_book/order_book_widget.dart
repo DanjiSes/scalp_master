@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:scalp_master/src/entities/order_book.dart';
 import 'package:scalp_master/src/widgets/order_book/price_level_widget.dart';
 
 class OrderBookWidget extends StatefulWidget {
