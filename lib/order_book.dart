@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:scalp_master/packages/binance-dart/lib/binance.dart';
@@ -20,7 +21,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String _symbol = "BTCUSDT";
   List<PriceLevel> _book = [];
   num _bigQuantity = 30;
-  num _step = 10;
+  num _step = 1;
 
   @override
   void initState() {
@@ -32,26 +33,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    var steppedBookMap = <num, PriceLevel>{};
-
-    for (var p in _book) {
-      var steppedPrice = roundIn(p.price, _step);
-
-      if (steppedBookMap.containsKey(steppedPrice)) {
-        steppedBookMap[steppedPrice]!.quantity += p.quantity;
-      } else {
-        steppedBookMap[steppedPrice] =
-            PriceLevel(steppedPrice, p.quantity, p.type);
-      }
-    }
-
-    var steppedBook = steppedBookMap.values.toList();
-
     return Scaffold(
         body: Center(
       child: ListView(
         children: [
-          ...steppedBook.map((p) {
+          ...transformOrderBook(_book).map((p) {
             return PriceLevelWidget(
                 price: p.price,
                 color: p.isAsk ? Colors.red : Colors.green,
@@ -83,6 +69,26 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _book = book;
     });
+  }
+
+  List<PriceLevel> transformOrderBook(List<PriceLevel> book) {
+    var steppedBookMap = <num, PriceLevel>{};
+
+    for (var p in _book) {
+      var steppedPrice = roundIn(p.price, _step);
+
+      if (steppedBookMap.containsKey(steppedPrice)) {
+        steppedBookMap[steppedPrice]!.quantity += p.quantity;
+      } else {
+        steppedBookMap[steppedPrice] =
+            PriceLevel(steppedPrice, p.quantity, p.type);
+      }
+    }
+
+    var steppedBook = steppedBookMap.values.toList();
+    steppedBook.sort((a, b) => b.price.compareTo(a.price));
+
+    return steppedBook;
   }
 }
 
