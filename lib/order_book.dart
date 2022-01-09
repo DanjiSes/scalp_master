@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:scalp_master/packages/binance-dart/lib/binance.dart';
@@ -20,8 +19,8 @@ class _MyHomePageState extends State<MyHomePage> {
   // State
   String _symbol = "BTCUSDT";
   List<PriceLevel> _book = [];
-  num _bigQuantity = 30;
-  num _step = 1;
+  final num _bigQuantity = 30;
+  final num _step = 1.1;
 
   @override
   void initState() {
@@ -206,5 +205,8 @@ class PriceLevel {
 }
 
 num roundIn(num number, num step) {
-  return number - number % step;
+  var fixedArr = step.toString().split('.').reversed;
+  var fixed = fixedArr.length > 1 ? fixedArr.first.length : 0;
+  var result = number - number % step;
+  return num.parse(result.toStringAsFixed(fixed));
 }
