@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:scalp_master/packages/binance-dart/lib/binance.dart';
@@ -20,29 +19,39 @@ class _MyHomePageState extends State<MyHomePage> {
   // State
   String _symbol = "BTCUSDT";
   List<PriceLevel> _book = [];
-  num _bigQuantity = 8;
+  num _bigQuantity = 30;
+  num _step = 10;
 
   @override
   void initState() {
     _depthSubscription =
         _binance.bookDepth(_symbol, 20).listen(handleOrderbookSnapshot);
-
     _binance.depth(_symbol, 20).then(handleOrderbookSnapshot);
-
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    var steppedBookMap = <num, PriceLevel>{};
+
+    for (var p in _book) {
+      var steppedPrice = roundIn(p.price, _step);
+
+      if (steppedBookMap.containsKey(steppedPrice)) {
+        steppedBookMap[steppedPrice]!.quantity += p.quantity;
+      } else {
+        steppedBookMap[steppedPrice] =
+            PriceLevel(steppedPrice, p.quantity, p.type);
+      }
+    }
+
+    var steppedBook = steppedBookMap.values.toList();
+
     return Scaffold(
         body: Center(
       child: ListView(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text("Order book levels: ${_book.length.toString()}"),
-          ),
-          ..._book.map((p) {
+          ...steppedBook.map((p) {
             return PriceLevelWidget(
                 price: p.price,
                 color: p.isAsk ? Colors.red : Colors.green,
@@ -162,16 +171,11 @@ class _PriceLevelWidgetState extends State<PriceLevelWidget> {
 }
 
 class PriceLevel {
-  final num price;
-  final num quantity;
   final String type;
+  num price;
+  num quantity;
 
   PriceLevel(this.price, this.quantity, this.type);
-
-  @override
-  String toString() {
-    return "{price: $price, quantity: $quantity}";
-  }
 
   get isAsk {
     return type == 'sell';
@@ -188,4 +192,13 @@ class PriceLevel {
   factory PriceLevel.bid(num price, num quantity) {
     return PriceLevel(price, quantity, 'buy');
   }
+
+  @override
+  String toString() {
+    return "{price: $price, quantity: $quantity}";
+  }
+}
+
+num roundIn(num number, num step) {
+  return number - number % step;
 }
