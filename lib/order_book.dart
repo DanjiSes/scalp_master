@@ -26,7 +26,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     _depthSubscription =
-        _binance.bookDepth(_symbol, 20).listen(handleOrderbookSnapshot);
+        _binance.bookDepth(_symbol, 20, 100).listen(handleOrderbookSnapshot);
     _binance.depth(_symbol, 20).then(handleOrderbookSnapshot);
     super.initState();
   }
@@ -38,10 +38,6 @@ class _MyHomePageState extends State<MyHomePage> {
       child: ListView(
         children: _price != null
             ? [
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text("$_price"),
-                ),
                 ...transformOrderBook(_book, _price!).map((p) {
                   return PriceLevelWidget(
                       price: p.price,
