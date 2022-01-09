@@ -17,10 +17,11 @@ class _MyHomePageState extends State<MyHomePage> {
   StreamSubscription<BookDepth>? _depthSubscription;
 
   // State
-  String _symbol = "BTCUSDT";
   List<PriceLevel> _book = [];
+  num? _price;
+  final String _symbol = "BTCUSDT";
   final num _bigQuantity = 30;
-  final num _step = 1.1;
+  final num _step = 1;
 
   @override
   void initState() {
@@ -35,17 +36,32 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
         body: Center(
       child: ListView(
-        children: [
-          ...transformOrderBook(_book).map((p) {
-            return PriceLevelWidget(
-                price: p.price,
-                color: p.isAsk ? Colors.red : Colors.green,
-                quantity: p.quantity,
-                indicator: _bigQuantity > 0
-                    ? p.quantity / _bigQuantity
-                    : _bigQuantity);
-          })
-        ],
+        children: _price != null
+            ? [
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text("$_price"),
+                ),
+                ...transformOrderBook(_book, _price!).map((p) {
+                  return PriceLevelWidget(
+                      price: p.price,
+                      color: p.isEmpty
+                          ? Colors.grey
+                          : p.isAsk
+                              ? Colors.red
+                              : Colors.green,
+                      quantity: p.quantity,
+                      indicator: _bigQuantity > 0
+                          ? p.quantity / _bigQuantity
+                          : _bigQuantity);
+                })
+              ]
+            : const [
+                Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Center(child: Text("Loading...")),
+                )
+              ],
       ),
     ));
   }
@@ -63,25 +79,35 @@ class _MyHomePageState extends State<MyHomePage> {
     var bidsList = bids.map((b) => PriceLevel.bid(b.price, b.qty));
     var asksList = asks.map((a) => PriceLevel.ask(a.price, a.qty));
 
+    var sortedBidsList = asksList.map((e) => e.price).toList();
+    sortedBidsList.sort();
+
     var book = [...asksList, ...bidsList];
 
     setState(() {
       _book = book;
+      _price = _price ?? roundIn(sortedBidsList.first, _step);
     });
   }
 
-  List<PriceLevel> transformOrderBook(List<PriceLevel> book) {
+  List<PriceLevel> transformOrderBook(List<PriceLevel> book, num price) {
     var steppedBookMap = <num, PriceLevel>{};
+
+    var firstStep = roundIn(price + price * 0.05, _step);
+    var lastSetp = roundIn(price - price * 0.05, _step);
+    var levelsCount = (firstStep - lastSetp) / _step;
+
+    var levelsIterator =
+        Iterable.generate(levelsCount.toInt(), (i) => lastSetp + i * _step);
+
+    for (var l in levelsIterator) {
+      steppedBookMap[l] = PriceLevel.empty(l, 0);
+    }
 
     for (var p in _book) {
       var steppedPrice = roundIn(p.price, _step);
-
-      if (steppedBookMap.containsKey(steppedPrice)) {
-        steppedBookMap[steppedPrice]!.quantity += p.quantity;
-      } else {
-        steppedBookMap[steppedPrice] =
-            PriceLevel(steppedPrice, p.quantity, p.type);
-      }
+      steppedBookMap[steppedPrice] =
+          PriceLevel(steppedPrice, p.quantity, p.type);
     }
 
     var steppedBook = steppedBookMap.values.toList();
@@ -183,19 +209,27 @@ class PriceLevel {
   PriceLevel(this.price, this.quantity, this.type);
 
   get isAsk {
-    return type == 'sell';
+    return type == "sell";
   }
 
   get isBid {
-    return type == 'buy';
+    return type == "buy";
+  }
+
+  get isEmpty {
+    return type == "empty";
   }
 
   factory PriceLevel.ask(num price, num quantity) {
-    return PriceLevel(price, quantity, 'sell');
+    return PriceLevel(price, quantity, "sell");
   }
 
   factory PriceLevel.bid(num price, num quantity) {
-    return PriceLevel(price, quantity, 'buy');
+    return PriceLevel(price, quantity, "buy");
+  }
+
+  factory PriceLevel.empty(num price, num quantity) {
+    return PriceLevel(price, quantity, "empty");
   }
 
   @override
