@@ -1,19 +1,8 @@
-import 'dart:convert';
+import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-
-class PriceLevel {
-  final double price;
-  final double quantity;
-
-  PriceLevel(this.price, this.quantity);
-
-  @override
-  String toString() {
-    return "{price: $price, quantity: $quantity}";
-  }
-}
+import 'package:scalp_master/packages/binance-dart/lib/binance.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({
@@ -25,19 +14,22 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final WebSocketChannel _channel = WebSocketChannel.connect(
-    Uri.parse('wss://stream.binance.com:9443/ws/bnbbtc@depth'),
-  );
+  final _binance = Binance();
+  StreamSubscription<BookDepth>? _depthSubscription;
 
-  final Map<double, PriceLevel> _bids = {};
-  final Map<double, PriceLevel> _asks = {};
+  // State
+  String _symbol = "BTCUSDT";
+  List<PriceLevel> _book = [];
+  num _bigQuantity = 8;
 
   @override
   void initState() {
+    _depthSubscription =
+        _binance.bookDepth(_symbol, 20).listen(handleOrderbookSnapshot);
+
+    _binance.depth(_symbol, 20).then(handleOrderbookSnapshot);
+
     super.initState();
-    _channel.stream.listen((message) {
-      bufferBook(jsonDecode(message));
-    });
   }
 
   @override
@@ -46,36 +38,19 @@ class _MyHomePageState extends State<MyHomePage> {
         body: Center(
       child: ListView(
         children: [
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(_asks.toString()),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(_bids.toString()),
-              )
-            ],
-          )
-          // ..._asks.values.toList().reversed.map((priceLeve) {
-          //   return PriceLevelWidget(
-          //       price: priceLeve.price,
-          //       color: Colors.red,
-          //       quantity: priceLeve.quantity,
-          //       indicator:
-          //           0.2 // maxValue > 0 ? double.parse(e[1]) / maxValue : maxValue,
-          //       );
-          // }),
-          // ..._bids.values.toList().map((priceLevel) {
-          //   return PriceLevelWidget(
-          //       price: priceLevel.price,
-          //       color: Colors.green,
-          //       quantity: priceLevel.quantity,
-          //       indicator:
-          //           0.2 // maxValue > 0 ? double.parse(e[1]) / maxValue : maxValue,
-          //       );
-          // }),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text("Order book levels: ${_book.length.toString()}"),
+          ),
+          ..._book.map((p) {
+            return PriceLevelWidget(
+                price: p.price,
+                color: p.isAsk ? Colors.red : Colors.green,
+                quantity: p.quantity,
+                indicator: _bigQuantity > 0
+                    ? p.quantity / _bigQuantity
+                    : _bigQuantity);
+          })
         ],
       ),
     ));
@@ -83,26 +58,21 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void dispose() {
-    _channel.sink.close();
+    _depthSubscription!.cancel();
     super.dispose();
   }
 
-  void bufferBook(dynamic book) {
+  void handleOrderbookSnapshot(BookDepth snapshot) {
+    var bids = snapshot.bids;
+    var asks = snapshot.asks;
+
+    var bidsList = bids.map((b) => PriceLevel.bid(b.price, b.qty));
+    var asksList = asks.map((a) => PriceLevel.ask(a.price, a.qty));
+
+    var book = [...asksList, ...bidsList];
+
     setState(() {
-      var bidsList = book['b'] as List<dynamic>;
-      var asksList = book['a'] as List<dynamic>;
-
-      for (var b in bidsList) {
-        var price = double.parse(b[0]);
-        var quantity = double.parse(b[1]);
-        _bids[price] = PriceLevel(price, quantity);
-      }
-
-      for (var a in asksList) {
-        var price = double.parse(a[0]);
-        var quantity = double.parse(a[1]);
-        _asks[price] = PriceLevel(price, quantity);
-      }
+      _book = book;
     });
   }
 }
@@ -116,10 +86,10 @@ class PriceLevelWidget extends StatefulWidget {
       required this.indicator})
       : super(key: key);
 
-  final double quantity;
-  final double price;
+  final num quantity;
+  final num price;
   final Color color;
-  final double indicator;
+  final num indicator;
 
   @override
   _PriceLevelWidgetState createState() => _PriceLevelWidgetState();
@@ -145,10 +115,6 @@ class _PriceLevelWidgetState extends State<PriceLevelWidget> {
     const textStyle = TextStyle(fontSize: 12);
     var bgColor = widget.color.withOpacity(_highlighted ? 0.4 : 0.3);
 
-    // if (double.parse(widget.volume) == 0) {
-    //   bgColor = widget.color.withOpacity(0);
-    // }
-
     return MouseRegion(
       onEnter: _highlightOn,
       onExit: _highlightOff,
@@ -162,7 +128,10 @@ class _PriceLevelWidgetState extends State<PriceLevelWidget> {
                   gradient: LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
-                stops: [widget.indicator, widget.indicator],
+                stops: [
+                  widget.indicator.toDouble(),
+                  widget.indicator.toDouble()
+                ],
                 colors: [
                   Colors.yellow.withOpacity(0.5),
                   bgColor,
@@ -189,5 +158,34 @@ class _PriceLevelWidgetState extends State<PriceLevelWidget> {
         ),
       )),
     );
+  }
+}
+
+class PriceLevel {
+  final num price;
+  final num quantity;
+  final String type;
+
+  PriceLevel(this.price, this.quantity, this.type);
+
+  @override
+  String toString() {
+    return "{price: $price, quantity: $quantity}";
+  }
+
+  get isAsk {
+    return type == 'sell';
+  }
+
+  get isBid {
+    return type == 'buy';
+  }
+
+  factory PriceLevel.ask(num price, num quantity) {
+    return PriceLevel(price, quantity, 'sell');
+  }
+
+  factory PriceLevel.bid(num price, num quantity) {
+    return PriceLevel(price, quantity, 'buy');
   }
 }
