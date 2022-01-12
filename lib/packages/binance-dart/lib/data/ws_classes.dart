@@ -185,7 +185,7 @@ class DiffBookDepth implements BookDepth, _WebsocketBase {
   final String symbol;
 
   final int firstUpdateId;
-  final int lastUpdateId;
+  int lastUpdateId;
 
   final List<DepthPoint> bids;
   final List<DepthPoint> asks;

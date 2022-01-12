@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:scalp_master/packages/binance-dart/lib/binance.dart';
@@ -13,103 +14,129 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final _binance = Binance();
-  StreamSubscription<BookDepth>? _depthSubscription;
+  // Binance api
+  final _binanceApi = Binance();
+  StreamSubscription<BookDepth>? _bookSubscription;
+  bool _isFirstEvent = true;
+
+  // Work with book
+  final _bookBuffer = Queue<DiffBookDepth>();
+  BookDepth? _book;
 
   // State
-  List<PriceLevel> _book = [];
-  num? _price;
   final String _symbol = "BTCUSDT";
-  final num _bigQuantity = 30;
-  final num _step = 1;
 
   @override
   void initState() {
-    _depthSubscription =
-        _binance.bookDepth(_symbol, 20, 100).listen(handleOrderbookSnapshot);
-    _binance.depth(_symbol, 20).then(handleOrderbookSnapshot);
+    // 1. Open a stream to wss://stream.binance.com:9443/ws/bnbbtc@depth.
+    _bookSubscription = _binanceApi.diffBookDepth(_symbol).listen((diffBook) {
+      // 2. Buffer the events you receive from the stream.
+      _bookBuffer.add(diffBook);
+
+      if (_book != null) {
+        setState(() {
+          while (_bookBuffer.isNotEmpty == true) {
+            DiffBookDepth diffBook = _bookBuffer.removeFirst();
+
+            // 4. Drop any event where u is <= lastUpdateId in the snapshot.
+            if (diffBook.lastUpdateId <= _book!.lastUpdateId) {
+              return;
+            }
+
+            // 5. The first processed event should have U <= lastUpdateId+1 AND u >= lastUpdateId+1.
+            if (_isFirstEvent == true &&
+                diffBook.firstUpdateId <= _book!.lastUpdateId + 1 &&
+                diffBook.lastUpdateId >= _book!.lastUpdateId + 1) {
+              _mergeBook(diffBook);
+              _isFirstEvent = false;
+              return;
+            }
+
+            // 6. While listening to the stream, each new event's U should be equal to the previous event's u+1.
+            if (diffBook.firstUpdateId != _book!.lastUpdateId + 1) {
+              return;
+            }
+
+            _mergeBook(diffBook);
+          }
+        });
+      }
+    });
+
+    // 3. Get a depth snapshot from https://api.binance.com/api/v3/depth?symbol=BNBBTC&limit=1000
+    _binanceApi.depth(_symbol, 20).then((book) {
+      _book = book;
+    });
+
     super.initState();
+  }
+
+  _mergeBook(DiffBookDepth diffBook) {
+    // 7. The data in each event is the absolute quantity for a price level.
+    // (просто заменяемое значение - абсолютное, не передают какую либо разницу между двумя величинами)
+    // 8. If the quantity is 0, remove the price level.
+    // 9. Receiving an event that removes a price level that is not in your local order book can happen and is normal.
+
+    // Update asks
+    for (var a in diffBook.asks) {
+      var aIdx = _book!.asks.indexWhere((_a) => _a.price == a.price);
+      if (aIdx == -1) {
+        _book!.asks.add(a);
+      } else if (_book!.asks[aIdx].qty == 0) {
+        _book!.asks.removeAt(aIdx);
+      } else {
+        _book!.asks[aIdx] = a;
+      }
+    }
+
+    // Update bids
+    for (var b in diffBook.bids) {
+      var bIdx = _book!.bids.indexWhere((_b) => _b.price == b.price);
+      if (bIdx == -1) {
+        _book!.bids.add(b);
+      } else if (_book!.bids[bIdx].qty == 0) {
+        _book!.bids.removeAt(bIdx);
+      } else {
+        _book!.bids[bIdx] = b;
+      }
+    }
+
+    // Sort all price levels
+    _book!.asks.sort((a, b) => b.price.compareTo(a.price));
+    _book!.bids.sort((a, b) => b.price.compareTo(a.price));
+
+    // Update lastUpdateId
+    _book!.lastUpdateId = diffBook.lastUpdateId;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         body: Center(
-      child: ListView(
-        children: _price != null
-            ? [
-                ...transformOrderBook(_book, _price!).map((p) {
-                  return PriceLevelWidget(
-                      price: p.price,
-                      color: p.isEmpty
-                          ? Colors.grey
-                          : p.isAsk
-                              ? Colors.red
-                              : Colors.green,
-                      quantity: p.quantity,
-                      indicator: _bigQuantity > 0
-                          ? p.quantity / _bigQuantity
-                          : _bigQuantity);
-                })
-              ]
-            : const [
-                Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Center(child: Text("Loading...")),
-                )
-              ],
-      ),
-    ));
+            child: ListView(
+      children: _book != null
+          ? [
+              ..._book!.asks.map((p) => PriceLevelWidget(
+                    price: p.price,
+                    color: Colors.red,
+                    quantity: p.qty,
+                    indicator: 0,
+                  )),
+              ..._book!.bids.map((p) => PriceLevelWidget(
+                    price: p.price,
+                    color: Colors.green,
+                    quantity: p.qty,
+                    indicator: 0,
+                  ))
+            ]
+          : [],
+    )));
   }
 
   @override
   void dispose() {
-    _depthSubscription!.cancel();
+    _bookSubscription!.cancel();
     super.dispose();
-  }
-
-  void handleOrderbookSnapshot(BookDepth snapshot) {
-    var bids = snapshot.bids;
-    var asks = snapshot.asks;
-
-    var bidsList = bids.map((b) => PriceLevel.bid(b.price, b.qty));
-    var asksList = asks.map((a) => PriceLevel.ask(a.price, a.qty));
-
-    var sortedBidsList = asksList.map((e) => e.price).toList();
-    sortedBidsList.sort();
-
-    var book = [...asksList, ...bidsList];
-
-    setState(() {
-      _book = book;
-      _price = _price ?? roundIn(sortedBidsList.first, _step);
-    });
-  }
-
-  List<PriceLevel> transformOrderBook(List<PriceLevel> book, num price) {
-    var steppedBookMap = <num, PriceLevel>{};
-
-    var firstStep = roundIn(price + price * 0.05, _step);
-    var lastSetp = roundIn(price - price * 0.05, _step);
-    var levelsCount = (firstStep - lastSetp) / _step;
-
-    var levelsIterator =
-        Iterable.generate(levelsCount.toInt(), (i) => lastSetp + i * _step);
-
-    for (var l in levelsIterator) {
-      steppedBookMap[l] = PriceLevel.empty(l, 0);
-    }
-
-    for (var p in _book) {
-      var steppedPrice = roundIn(p.price, _step);
-      steppedBookMap[steppedPrice] =
-          PriceLevel(steppedPrice, p.quantity, p.type);
-    }
-
-    var steppedBook = steppedBookMap.values.toList();
-    steppedBook.sort((a, b) => b.price.compareTo(a.price));
-
-    return steppedBook;
   }
 }
 

@@ -51,9 +51,12 @@ class Symbol {
 /// https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md#order-book
 
 class BookDepth {
-  final int lastUpdateId;
+  int lastUpdateId;
   final List<DepthPoint> bids;
   final List<DepthPoint> asks;
+
+  BookDepth(
+      {required this.lastUpdateId, required this.asks, required this.bids}) {}
 
   BookDepth.fromMap(Map m)
       : this.lastUpdateId = m["lastUpdateId"],
